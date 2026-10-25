@@ -1,5 +1,5 @@
-
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -64,10 +64,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Adjust this if your Vite frontend uses a different port.
+# Configure allowed frontend origins for local development and Render.
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
