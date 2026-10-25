@@ -5,8 +5,12 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-STORAGE_ROOT = Path(r"C:\TrustVaultPrivateStorage").resolve()
-
+STORAGE_ROOT = Path(
+    os.getenv(
+        "TRUSTVAULT_STORAGE_ROOT",
+        r"C:\TrustVaultPrivateStorage",
+    )
+).resolve()
 
 def _validate_storage_key(storage_key: str) -> str:
     """Accept only a generated UUID-style storage filename."""
