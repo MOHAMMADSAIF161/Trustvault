@@ -490,3 +490,23 @@ input[type="file"]::file-selector-button { margin-right: 12px; border: 0; border
     height: min(560px, calc(100vh - 90px));
   }
 }
+.secondary-button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #5541a8;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.secondary-button:hover {
+  background: rgba(120, 90, 220, 0.12);
+}
+
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

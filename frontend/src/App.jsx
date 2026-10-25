@@ -671,10 +671,13 @@ async function askDashboardAssistant(event) {
   );
 }
 
-function App() {
+function App() { 
+  const [authMode, setAuthMode] = useState("login");
   const [selectedRole, setSelectedRole] = useState("owner");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [session, setSession] = useState(null);
@@ -751,7 +754,49 @@ function App() {
       setDocumentsLoading(false);
     }
   }
+  async function handleRegister(event) {
+  event.preventDefault();
+  setMessage("");
 
+  if (selectedRole === "admin") {
+    setMessage(
+      "Admin accounts can only be created through a trusted administrative process."
+    );
+    return;
+  }
+
+  if (password.length < 12 || password.length > 128) {
+    setMessage("Password must be between 12 and 128 characters.");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setMessage("The passwords do not match.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    await apiRequest("/auth/register", null, {
+      method: "POST",
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+        role: selectedRole,
+      }),
+    });
+
+    setAuthMode("login");
+    setPassword("");
+    setConfirmPassword("");
+    setMessage("Account created successfully. Please sign in.");
+  } catch (err) {
+    setMessage(err.message || "Unable to create your account.");
+  } finally {
+    setLoading(false);
+  }
+}
   async function handleLogin(event) {
     event.preventDefault();
     setLoading(true);
@@ -1342,66 +1387,148 @@ function App() {
         </div>
 
         <section className="login-card">
-          <p className="eyebrow">WELCOME BACK</p>
-          <h2>Sign in to TrustVault</h2>
-          <p className="muted">Choose your account role to continue.</p>
+  <p className="eyebrow">
+    {authMode === "login" ? "WELCOME BACK" : "JOIN TRUSTVAULT"}
+  </p>
 
-          <div className="role-list">
-            {ROLES.map((role) => (
-              <button
-                type="button"
-                key={role.id}
-                className={`role-option ${selectedRole === role.id ? "selected" : ""}`}
-                onClick={() => setSelectedRole(role.id)}
-                aria-pressed={selectedRole === role.id}
-              >
-                
-                  
-                
-                <span className="role-copy">
-                  <strong>{role.title}</strong>
-                  <small>{role.description}</small>
-                </span>
-                <span className="radio">{selectedRole === role.id ? "●" : "○"}</span>
-              </button>
-            ))}
-          </div>
+  <h2>
+    {authMode === "login"
+      ? "Sign in to TrustVault"
+      : "Create your account"}
+  </h2>
 
-          <form onSubmit={handleLogin}>
-            <label htmlFor="email">Email address</label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="username"
-              required
-            />
+  <p className="muted">
+    {authMode === "login"
+      ? "Choose your account role to continue."
+      : "Register as a document owner or viewer."}
+  </p>
 
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
+  <div className="role-list">
+    {(authMode === "register"
+      ? ROLES.filter((role) => role.id !== "admin")
+      : ROLES
+    ).map((role) => (
+      <button
+        type="button"
+        key={role.id}
+        className={`role-option ${
+          selectedRole === role.id ? "selected" : ""
+        }`}
+        onClick={() => setSelectedRole(role.id)}
+        aria-pressed={selectedRole === role.id}
+      >
+        <span className="role-copy">
+          <strong>{role.title}</strong>
+          <small>{role.description}</small>
+        </span>
 
-            <button className="submit-button" type="submit" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in securely →"}
-            </button>
-          </form>
+        <span className="radio">
+          {selectedRole === role.id ? "●" : "○"}
+        </span>
+      </button>
+    ))}
+  </div>
 
-          {message && <p className="login-message" role="alert">{message}</p>}
+  <form
+    onSubmit={authMode === "login" ? handleLogin : handleRegister}
+  >
+    <label htmlFor="email">Email address</label>
+    <input
+      id="email"
+      type="email"
+      placeholder="you@example.com"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+      autoComplete="username"
+      maxLength={255}
+      required
+    />
 
-          <p className="fine-print">
-            Selecting a role does not grant permissions. TrustVault verifies
-            your account and access rights on the server.
-          </p>
-        </section>
+    <label htmlFor="password">Password</label>
+    <input
+      id="password"
+      type="password"
+      placeholder={
+        authMode === "login"
+          ? "Enter your password"
+          : "Create a password (12–128 characters)"
+      }
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      autoComplete={
+        authMode === "login" ? "current-password" : "new-password"
+      }
+      minLength={authMode === "register" ? 12 : undefined}
+      maxLength={128}
+      required
+    />
+
+    {authMode === "register" && (
+      <>
+        <label htmlFor="confirm-password">Confirm password</label>
+        <input
+          id="confirm-password"
+          type="password"
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+          maxLength={128}
+          required
+        />
+      </>
+    )}
+
+    <button
+      className="submit-button"
+      type="submit"
+      disabled={loading}
+    >
+      {loading
+        ? authMode === "login"
+          ? "Signing in..."
+          : "Creating account..."
+        : authMode === "login"
+          ? "Sign in securely →"
+          : "Create account →"}
+    </button>
+  </form>
+
+  {message && (
+    <p className="login-message" role="alert">
+      {message}
+    </p>
+  )}
+
+  <p className="fine-print">
+    {authMode === "login"
+      ? "Selecting a role does not grant permissions. TrustVault verifies your account and access rights on the server."
+      : "Registration is available for Owners and Viewers. Admin accounts must be created through a trusted administrative process."}
+  </p>
+
+  <button
+    type="button"
+    className="secondary-button"
+    disabled={loading}
+    onClick={() => {
+      const nextMode =
+        authMode === "login" ? "register" : "login";
+
+      if (nextMode === "register" && selectedRole === "admin") {
+        setSelectedRole("owner");
+      }
+
+      setAuthMode(nextMode);
+      setPassword("");
+      setConfirmPassword("");
+      setMessage("");
+    }}
+  >
+    {authMode === "login"
+      ? "New to TrustVault? Sign up"
+      : "Already have an account? Sign in"}
+  </button>
+</section>
       </section>
     </main>
   );
